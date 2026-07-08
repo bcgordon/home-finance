@@ -847,6 +847,27 @@ textarea { resize: none; }
             </select>
           </div>
         </div>
+        <div id="bf-endon-wrap">
+          <label class="label">Ending (optional)</label>
+          <div style="display:flex;gap:8px">
+            <select id="bf-end-month" style="flex:1;font-family:inherit;font-size:17px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+              <option value="">Never (ongoing)</option>
+              <option value="0">January</option><option value="1">February</option>
+              <option value="2">March</option><option value="3">April</option>
+              <option value="4">May</option><option value="5">June</option>
+              <option value="6">July</option><option value="7">August</option>
+              <option value="8">September</option><option value="9">October</option>
+              <option value="10">November</option><option value="11">December</option>
+            </select>
+            <select id="bf-end-year" style="width:100px;font-family:inherit;font-size:17px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+            </select>
+          </div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:4px">Leave as "Never" for ongoing bills. Set a month to stop the bill after that month — history stays, future occurrences stop.</div>
+        </div>
         <p id="bf-err" class="err"></p>
         <button class="btn btn-coral btn-full" style="padding:13px" onclick="saveBill()">Save bill</button>
         <button class="btn btn-ghost btn-full" onclick="hideBillForm()">Cancel</button>
@@ -3084,6 +3105,9 @@ function showAddBill() {
   var _now = new Date();
   document.getElementById('bf-start-month').value = _now.getMonth();
   document.getElementById('bf-start-year').value = _now.getFullYear();
+  // Default ending = Never
+  document.getElementById('bf-end-month').value = '';
+  document.getElementById('bf-end-year').value = _now.getFullYear();
   document.getElementById('bill-form-wrap').style.display = 'block';
   document.getElementById('bf-name').focus();
 }
@@ -3110,6 +3134,9 @@ function editBill(id) {
   var _now2 = new Date();
   document.getElementById('bf-start-month').value = b.startMonth !== undefined ? b.startMonth : _now2.getMonth();
   document.getElementById('bf-start-year').value = b.startYear !== undefined ? b.startYear : _now2.getFullYear();
+  // Populate ending (blank = Never)
+  document.getElementById('bf-end-month').value = b.endMonth !== undefined ? b.endMonth : '';
+  document.getElementById('bf-end-year').value = b.endYear !== undefined ? b.endYear : _now2.getFullYear();
   document.getElementById('bill-form-title').textContent = 'Edit bill';
   document.getElementById('bf-err').style.display = 'none';
   updateFreqUI();
@@ -3166,6 +3193,25 @@ async function saveBill() {
   if (billFreq === 'monthly' || billFreq === 'weekly' || billFreq === 'biweekly' || billFreq === 'quarterly') {
     bill.startMonth = parseInt(document.getElementById('bf-start-month').value);
     bill.startYear  = parseInt(document.getElementById('bf-start-year').value);
+  }
+
+  // Add endMonth/endYear if set (blank = ongoing). Applies to all recurring types.
+  var endMoVal = document.getElementById('bf-end-month').value;
+  if (endMoVal !== '' && billFreq !== 'once') {
+    var endMo = parseInt(endMoVal);
+    var endYr = parseInt(document.getElementById('bf-end-year').value);
+    // Validate: end must not be before start
+    var startMoForCheck = bill.startMonth !== undefined ? bill.startMonth : (bill.month !== undefined ? bill.month : 0);
+    var startYrForCheck = bill.startYear !== undefined ? bill.startYear : (bill.year !== undefined ? bill.year : endYr);
+    var endDate = new Date(endYr, endMo, 1);
+    var startDate = new Date(startYrForCheck, startMoForCheck, 1);
+    if (endDate < startDate) {
+      errEl.textContent = 'End date cannot be before the start date';
+      errEl.style.display = 'block';
+      return;
+    }
+    bill.endMonth = endMo;
+    bill.endYear = endYr;
   }
 
   if (!record.bills) record.bills = [];
@@ -3543,6 +3589,13 @@ function getBillOccurrencesInRange(b, fromDate, toDate, opts) {
   }
   var effectiveFrom = billStart && billStart > fromDate ? billStart : fromDate;
 
+  // Respect endMonth/endYear — bill stops generating after this month (inclusive).
+  // Mirrors startMonth/startYear. Blank = no end (runs forever, as before).
+  var billEnd = null;
+  if (b.endYear !== undefined && b.endMonth !== undefined) {
+    billEnd = new Date(b.endYear, b.endMonth + 1, 0, 23, 59, 59); // last day of end month
+  }
+
   if (b.freq === 'monthly') {
     var d = new Date(effectiveFrom.getFullYear(), effectiveFrom.getMonth(), b.day);
     while (d <= toDate) {
@@ -3585,6 +3638,11 @@ function getBillOccurrencesInRange(b, fromDate, toDate, opts) {
   } else if (b.freq === 'once') {
     var od = new Date(b.year || fromDate.getFullYear(), b.month, b.day);
     if (od >= fromDate && od <= toDate) dates.push(od);
+  }
+
+  // Honor bill end date: drop any occurrence after the end month (all freq types).
+  if (billEnd) {
+    dates = dates.filter(function(dt) { return dt <= billEnd; });
   }
 
   // Honor per-occurrence skips: a 'skip' sentinel in billOverrides removes that
@@ -3784,7 +3842,7 @@ async function refreshBalance() {
 
 // Current billing cycle: March 13 – April 11 (will be configurable later)
 // ── APP VERSION ─────────────────────────────────────────────────────────────
-var APP_VERSION = 'v3.4.3';
+var APP_VERSION = 'v3.5.0';
 
 // ── QUOTE OF THE DAY ─────────────────────────────────────────────────────────
 var DAILY_QUOTES = [
