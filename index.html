@@ -3842,7 +3842,7 @@ async function refreshBalance() {
 
 // Current billing cycle: March 13 – April 11 (will be configurable later)
 // ── APP VERSION ─────────────────────────────────────────────────────────────
-var APP_VERSION = 'v3.5.0';
+var APP_VERSION = 'v3.5.1';
 
 // ── QUOTE OF THE DAY ─────────────────────────────────────────────────────────
 var DAILY_QUOTES = [
@@ -4396,7 +4396,7 @@ function updateBalHero() {
     balActualBalance = amt;
     document.getElementById('bal-actual-input').value = amt;
     el.textContent = '$' + Math.round(amt).toLocaleString('en-US');
-    el.className = 'bal-amount ' + (amt >= 5000 ? 'bal-safe' : amt >= FLOOR ? 'bal-warn' : 'bal-danger');
+    el.className = 'bal-amount ' + (amt >= 3000 ? 'bal-safe' : amt >= FLOOR ? 'bal-warn' : 'bal-danger');
     if (ts) {
       var d = new Date(ts);
       var days = Math.round((new Date() - d) / 86400000);
@@ -4531,7 +4531,7 @@ function renderBalChart() {
     var savPct = Math.max(savVal / maxVal * 100, 0);
     if (chkPct + savPct < 2) chkPct = 2; // min visible
 
-    var chkColor = chkVal >= 5000 ? 'var(--grass)' : chkVal >= FLOOR ? 'var(--sun)' : 'var(--red)';
+    var chkColor = chkVal >= 3000 ? 'var(--grass)' : chkVal >= FLOOR ? 'var(--sun)' : 'var(--red)';
     var savColor = 'var(--sky-dim)';
 
     // Container bar (stacks checking bottom + savings top)
@@ -4637,7 +4637,7 @@ function renderBalTimeline() {
     row.innerHTML = '<span class="tl-event-date">' + dateStr + '</span>' +
       '<span class="tl-event-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;' + (ev.type === 'save' ? 'color:var(--sky-dim)' : '') + '">' + ev.name + ccEditBtn + actionBtn + '</span>' +
       '<span class="tl-event-amt ' + typeClass + '">' + sign + fmt(ev.amt) + '</span>' +
-      '<span class="tl-event-amt" style="min-width:80px;color:' + (ev.balance < FLOOR ? 'var(--red)' : ev.balance < 5000 ? 'var(--sun-dim)' : 'var(--grass-dim)') + '">' + fmt(ev.balance) + '</span>';
+      '<span class="tl-event-amt" style="min-width:80px;color:' + (ev.balance < FLOOR ? 'var(--red)' : ev.balance < 3000 ? 'var(--sun-dim)' : 'var(--grass-dim)') + '">' + fmt(ev.balance) + '</span>';
 
     container.appendChild(row);
   }
